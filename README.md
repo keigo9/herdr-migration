@@ -8,3 +8,4 @@ Herdr デスクトップアプリのカスタマイズ（glass + glass-onedark�
 
 - `AGENT_INSTRUCTIONS.md`: エージェント向けの手順書
 - `files/`: GitHub にない自作ファイル（テーマ、usage-status mod、ステータスラインスクリプト）
+- `files/moonlit/`: 別テーマ moonlit（ドット絵の夜空の背景と紺のテーマ）。手順は `AGENT_INSTRUCTIONS.md` の最後

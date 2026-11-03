@@ -126,3 +126,47 @@ herdr-app do app.theme '{"name":"glass-onedark"}'
   - スペースの左にドット絵のスプライト、ヘッダーに Herdr のロゴがない
   - Claude Code を一度動かしたあと、ステータスバー右に `5h ◯% ↻ 時刻  週 ◯% ↻ 曜日 時刻`
 - 終わったら、変えたファイルと確認結果をユーザーに報告する
+
+## 別テーマ: moonlit（夜空）
+
+glass と同じ構成のまま、背景をドット絵の夜空（紺のグラデーション、三日月、星、角ばった雲）に、色を紺の半透明にした別レイアウト。
+ペインが半透明なので、ターミナルの後ろに夜空が透けて見える。背景は止まった絵（Herdr は背景の GIF を動かさない）。
+上の手順 1〜8 を終えてから行う。
+
+### 1. ファイルを置く
+
+```sh
+cp files/moonlit/moonlit.json ~/.config/herdr-app/themes/moonlit.json
+cp files/moonlit/moonlit.png ~/.config/herdr-app/backgrounds/moonlit.png
+cp files/moonlit/moonlit-preview.png ~/.config/herdr-app/layouts/moonlit.png
+```
+
+- `themes/moonlit.json`: glass テーマを元に、`background` を `#0d1433`、`colors` を紺の半透明（ペイン `#0d143370`、サイドバー・バー `#0d143399` など）にしたもの
+- `backgrounds/moonlit.png`: 1600×1000 の背景。`files/moonlit/make-background.py` で作り直せる（`python3 -I make-background.py <出力パス> [拡大率]`、標準ライブラリだけで動く）
+- `layouts/moonlit.png`: 設定画面に出る見本の画像
+
+### 2. レイアウトを作る
+
+手順 6 を終えた `layouts/glass.json` をコピーして `layouts/moonlit.json` にし、トップレベルの 3 つの値だけ変える:
+
+| キー | glass | moonlit |
+|---|---|---|
+| `theme` | `glass` | `moonlit` |
+| `background.image` | `backgrounds/glass-ambient.png` | `backgrounds/moonlit.png` |
+| `preview` | `layouts/glass.png` | `layouts/moonlit.png` |
+
+ほかは glass と同じにする（mod の差し替えもそのまま引き継がれる）。
+
+### 3. 切り替える
+
+```sh
+herdr-app do layout.switch '{"name":"moonlit"}'
+herdr-app do app.theme '{"name":"moonlit"}'
+```
+
+`cmd-shift-l` で glass と行き来できる。
+
+### 確認
+
+- `herdr-app status` で `"layout": "moonlit"`、`"errors": []`
+- スクショで、カードのすき間に紺の夜空と月が見え、ペインの後ろにも夜空がうっすら透けている
