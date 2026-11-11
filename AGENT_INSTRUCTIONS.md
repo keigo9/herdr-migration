@@ -170,3 +170,106 @@ herdr-app do app.theme '{"name":"moonlit"}'
 
 - `herdr-app status` で `"layout": "moonlit"`、`"errors": []`
 - スクショで、カードのすき間に紺の夜空と月が見え、ペインの後ろにも夜空がうっすら透けている
+
+## 別テーマ: pokemon-plus（ポケモン）
+
+エージェント 1 体ごとにポケモンが 1 匹付き、画面下の帯を歩き回るレイアウト。Herdr 標準の main をもとにしている（glass・moonlit とは別系統なので、上の手順 1〜8 をしていなくても入れられる）。
+[mathieucroset/herdr-pokemon-agents](https://github.com/mathieucroset/herdr-pokemon-agents) を元に、[SaifHarding/herdr-pokemon-agents-plus](https://github.com/SaifHarding/herdr-pokemon-agents-plus) の顔と鳴き声を取り入れ、ポケモンを増やしたもの。
+
+- **画面下の帯**: 作業中は歩き、待機中はぶらついて 3 分で眠り、入力待ちは止まって `!`、完了は `✓`。クリックでそのエージェントへ、右クリック（または `alt-shift-p`）でポケモンを選ぶ画面
+- **ポケモン**: PMD SpriteCollab に歩くアニメがある 974 匹（第 1〜9 世代）。名前は日本語。選ぶ画面は世代ごとのタブと、日本語名・英語名・番号の検索
+- **上のタブ**: そのタブのエージェントのポケモンのアイコン（第 7 世代までは PokeAPI のメニューアイコン、第 8 世代以降は正面の絵を縮めたもの）
+- **エージェント一覧**: ポケモンの顔。作業中は真剣、入力待ちは困り顔、完了はニコニコ
+- **Spaces**: スペースごとにランダムなボール（26 種類、一巡するまで重ならない）
+- **読み込み中**: ポケモンの絵ができるまで、ランダムなボールが点滅して待つ
+- **配色**: `pokedex`（クリーム色の地にモンスターボールの赤。OS がダークモードのときは Herdr 標準の graphite）
+- **2 つのレイアウト**: `pokemon-plus` は鳴き声あり（入力待ちで鳴く。完了でも鳴く）、`pokemon-plus-quiet` は鳴き声なし。それ以外は同じ
+
+### 前提
+
+- ImageMagick（`magick`）が必要。なければ `brew install imagemagick`。ないとポケモンがボールのまま
+- 鳴き声の「完了時の高く短い声」には ffmpeg を使う。なければ普通の鳴き声で代わりに鳴る（入れなくてよい）
+- 元の PC の Herdr は 0.1.15
+
+### 通信すること（入れる前にユーザーに伝える）
+
+ポケモンやボールの絵・鳴き声はこのリポジトリに入っていない（任天堂などの著作物のため）。使うときにダウンロードして `~/.config/herdr-app/data/pokemon-plus/` に保存する。送るデータはない。
+
+- raw.githubusercontent.com: PMDCollab/SpriteCollab（歩く絵と顔）、PokeAPI/sprites（アイコンとボール）
+- play.pokemonshowdown.com: 鳴き声（`pokemon-plus` レイアウトのときだけ）
+- 実行するプログラム: `curl`、ImageMagick、ffmpeg（あれば）、`mv`、`rm`
+
+### 1. 配色と mod を置く
+
+```sh
+H=~/.config/herdr-app
+cp files/pokemon-plus/pokedex.json $H/themes/pokedex.json
+
+mkdir -p $H/mods/pokemon-plus
+cp files/pokemon-plus/pokemon-plus/mod.json $H/mods/pokemon-plus/   # mod.json を先に置く
+cp files/pokemon-plus/pokemon-plus/{main.js,sprites.js,dex.js} $H/mods/pokemon-plus/
+
+herdr-app do mod.clone '{"name":"tabs","as":"pokemon-tabs"}'
+herdr-app do mod.clone '{"name":"agents","as":"pokemon-agents-list"}'
+herdr-app do mod.clone '{"name":"spaces","as":"pokemon-spaces"}'
+cp files/pokemon-plus/pokemon-tabs/main.js $H/mods/pokemon-tabs/main.js
+cp files/pokemon-plus/pokemon-agents-list/main.js $H/mods/pokemon-agents-list/main.js
+cp files/pokemon-plus/pokemon-spaces/main.js $H/mods/pokemon-spaces/main.js
+
+sh files/pokemon-plus/get-balls.sh
+```
+
+- 配色の名前をレイアウト名（`pokemon-plus`）と同じにしないこと。Herdr はレイアウトと同じ名前の配色を「そのレイアウト専用」として扱い、ほかのレイアウトの設定画面に出さない
+- `get-balls.sh` は 26 種類のボールの絵を取ってきて、`mods/pokemon-plus/balls/` と `mods/pokemon-spaces/balls/` に置く
+- `pokemon-plus` は自作なので、そのまま置けばよい（元は herdr-pokemon-agents の `main.js` / `sprites.js`）
+
+### 2. 3 つの複製 mod（Herdr のバージョンが違うとき）
+
+`pokemon-tabs` / `pokemon-agents-list` / `pokemon-spaces` は Herdr 0.1.15 の `tabs` / `agents` / `spaces` を複製して少しだけ足したもの。バージョンが違うなら、`files/` の `main.js` で上書きせず、クローンした新しい `main.js` に次の部分だけ移植する。どれも、画面下の帯（`pokemon-plus`）が共有する状態を読むだけ:
+
+- 共有状態 `pokemon-plus`: `{ panes: { <ペインの id>: <図鑑番号> } }`（どのエージェントがどのポケモンか）
+- 共有状態 `pokemon-plus.assets`: `{ <図鑑番号>: { icon: true/false, faces: ["Normal", ...] } }`（アイコンと顔をダウンロード済みか）
+
+| mod | 足したもの |
+|---|---|
+| `pokemon-tabs` | 関数 `monIcon(pane)`。`render` の `item` で、タブのエージェントのペイン（`agentPane`）からアイコンの画像（`data/pokemon-plus/icons/<番号>.png`、24×18）を出し、なければ元のプログラムのアイコン |
+| `pokemon-agents-list` | 定数 `FACE` と関数 `face(a, size)`。`row` の `pic` を `face(a, 22) ?? icon(...)` にする（顔は `data/pokemon-plus/portraits/<4 桁の番号>/<表情>.png`） |
+| `pokemon-spaces` | `import` に `image`、定数 `BALLS` と `ballOf`。`render` で共有状態 `pokemon-spaces.balls` にスペースごとのボールを決め（使われていない中からランダム）、行の頭文字のアイコンの代わりに `mods/pokemon-spaces/balls/<ボール>.png`（22px）を出す |
+
+### 3. レイアウトを作る
+
+```sh
+python3 -I files/pokemon-plus/make-layouts.py
+```
+
+`layouts/main.json` をもとに `layouts/pokemon-plus.json`（鳴き声あり）と `layouts/pokemon-plus-quiet.json`（鳴き声なし）を作る。main からの違いは:
+
+- `theme` を `{ "light": "pokedex", "dark": "graphite" }`
+- `tabs` → `pokemon-tabs`、`agents` → `pokemon-agents-list`、`spaces` → `pokemon-spaces`
+- `work` 列のステータスバー（`status`）の上に帯を追加: `{ "id": "pokemon-plus", "type": "block", "content": { "mod": "pokemon-plus", "props": { "cries": true } }, "size": { "px": 112 }, "min": 72, "max": 240 }`（quiet は `"cries": false`）
+
+同じ名前のレイアウトが既にあれば、上書きせずに止まる。
+
+### 4. キーと切り替え
+
+`~/.config/herdr-app/keys.json` の `global` に `"alt-shift-p": "pokemon-plus.pick"` をマージする（ほかのキーはそのまま。`alt-shift-p` が既に使われていたらユーザーに聞く）。
+
+```sh
+herdr-app do layout.switch '{"name":"pokemon-plus-quiet"}'
+```
+
+`cmd-shift-l` で `pokemon-plus`（鳴き声あり）やほかのレイアウトと行き来できる。
+
+- 鳴き声ありでは、Herdr の通知音も一緒に鳴る。通知音は `settings.json` の `sounds` で決まる全体の設定なので、レイアウトごとには変えられない
+- 前に別のポケモンの mod（`pokemon-agents`）を使っていたら、その割り当ては最初の 1 回だけ引き継ぐ
+
+### 確認
+
+- `~/.config/herdr-app` で `herdr-app check mods/<名前>` を実行し、`pokemon-plus` `pokemon-tabs` `pokemon-agents-list` `pokemon-spaces` がすべて通る
+- `herdr-app status` で `"layout": "pokemon-plus-quiet"`、`"errors": []`
+- エージェントを動かしてから `herdr-app shot <パス>.png` でスクショを撮り、次を確認する（初回は絵のダウンロードで数秒〜十数秒かかる）:
+  - 画面下の帯にポケモンが立ち、名前の札が付いている
+  - 上のタブとエージェント一覧に、帯と同じポケモンのアイコン・顔が出ている
+  - Spaces の名前の左にボールの絵
+  - 地の色がクリーム、強調色が赤（`#e3350d`）
+- `herdr-app do pokemon-plus.pick` でポケモンを選ぶ画面が開き、アイコンが並ぶ
