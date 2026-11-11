@@ -197,33 +197,44 @@ const CRIES = "https://play.pokemonshowdown.com/audio/cries";
 const CRY_OVERRIDES = { 25: "pikachu-starter", 133: "eevee-starter" };
 const cryFile = (id) => (CRY_OVERRIDES[id] ? `${id}-${CRY_OVERRIDES[id]}` : String(id));
 const cryName = (name) => name.toLowerCase().replace("♀", "f").replace("♂", "m").replace(/[^a-z0-9]/g, "");
+const CRY_VOLUME = 0.25; // cries play at this share of the downloaded volume (needs ffmpeg)
 
-export async function ensureCry(id, enName) {
+async function downloadCry(id, enName) {
   const dir = `${DATA}/cries`;
   const out = `${dir}/${cryFile(id)}.mp3`;
-  const rel = `${DATA_REL}/cries/${cryFile(id)}.mp3`;
-  if (await fs.exists(out).catch(() => false)) return rel;
+  if (await fs.exists(out).catch(() => false)) return;
   await fs.mkdir(dir, { recursive: true });
   const tmp = `${dir}/${cryFile(id)}.part`;
   await curl([[tmp, `${CRIES}/${CRY_OVERRIDES[id] ?? cryName(enName)}.mp3`]]);
   // A finished download moves into place, so a cut-off one is never played.
   const mv = await exec("mv", ["-f", tmp, out]);
   if (mv.code !== 0) throw new Error(mv.stderr.trim() || "could not save the cry");
-  return rel;
 }
 
-// The done chirp: the cry about 30% higher, at half volume, fading out. Null without ffmpeg
-// (the caller plays the plain cry instead).
-export async function ensureChirp(id, enName) {
-  const out = `${DATA}/cries/${cryFile(id)}-done.mp3`;
-  const rel = `${DATA_REL}/cries/${cryFile(id)}-done.mp3`;
+// Runs the downloaded cry through an ffmpeg filter into <cry>-<suffix>.mp3. Null without ffmpeg.
+async function filterCry(id, enName, suffix, filter) {
+  const out = `${DATA}/cries/${cryFile(id)}-${suffix}.mp3`;
+  const rel = `${DATA_REL}/cries/${cryFile(id)}-${suffix}.mp3`;
   if (await fs.exists(out).catch(() => false)) return rel;
-  await ensureCry(id, enName);
-  const tmp = `${DATA}/cries/${cryFile(id)}-done.part.mp3`;
-  const filter = "aresample=44100,asetrate=57330,aresample=44100,volume=0.5,afade=t=out:st=0.45:d=0.35";
+  await downloadCry(id, enName);
+  const tmp = `${DATA}/cries/${cryFile(id)}-${suffix}.part.mp3`;
   const r = await exec("ffmpeg", ["-y", "-loglevel", "error", "-i", `${DATA}/cries/${cryFile(id)}.mp3`, "-af", filter,
     "-codec:a", "libmp3lame", "-q:a", "4", tmp]).catch(() => null);
   if (!r || r.code !== 0) return null;
   const mv = await exec("mv", ["-f", tmp, out]);
   return mv.code === 0 ? rel : null;
+}
+
+// The cry at CRY_VOLUME; the plain download without ffmpeg.
+export async function ensureCry(id, enName) {
+  // The volume is in the file name, so changing CRY_VOLUME makes new files.
+  const quiet = await filterCry(id, enName, `quiet-${CRY_VOLUME}`, `volume=${CRY_VOLUME}`);
+  return quiet ?? `${DATA_REL}/cries/${cryFile(id)}.mp3`;
+}
+
+// The done chirp: the cry about 30% higher, at half of CRY_VOLUME, fading out. Null without ffmpeg
+// (the caller plays the cry instead).
+export async function ensureChirp(id, enName) {
+  const filter = `aresample=44100,asetrate=57330,aresample=44100,volume=${CRY_VOLUME / 2},afade=t=out:st=0.45:d=0.35`;
+  return filterCry(id, enName, `done-${CRY_VOLUME}`, filter);
 }

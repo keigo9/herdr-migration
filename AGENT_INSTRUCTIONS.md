@@ -188,7 +188,9 @@ herdr-app do app.theme '{"name":"moonlit"}'
 ### 前提
 
 - ImageMagick（`magick`）が必要。なければ `brew install imagemagick`。ないとポケモンがボールのまま
-- 鳴き声の「完了時の高く短い声」には ffmpeg を使う。なければ普通の鳴き声で代わりに鳴る（入れなくてよい）
+- 鳴き声には ffmpeg を使う（`brew install ffmpeg`）。鳴き声は元の 25%、完了時の高く短い声はその半分の音量で鳴る。ffmpeg がないと、どちらも元の音量の普通の鳴き声で鳴ってうるさい
+  - 音量は `mods/pokemon-plus/sprites.js` の `CRY_VOLUME`（0.25）で変えられる。ファイル名に音量が入るので（`<番号>-quiet-0.25.mp3`）、変えると次に鳴くときに作り直される
+- pokedex は明るい配色なので、Claude Code の `/theme` を `auto`（または Light 系）にする。ダーク用のテーマのままだと、確認画面などの白い文字が見えない
 - 元の PC の Herdr は 0.1.15
 
 ### 通信すること（入れる前にユーザーに伝える）
@@ -197,7 +199,7 @@ herdr-app do app.theme '{"name":"moonlit"}'
 
 - raw.githubusercontent.com: PMDCollab/SpriteCollab（歩く絵と顔）、PokeAPI/sprites（アイコンとボール）
 - play.pokemonshowdown.com: 鳴き声（`pokemon-plus` レイアウトのときだけ）
-- 実行するプログラム: `curl`、ImageMagick、ffmpeg（あれば）、`mv`、`rm`
+- 実行するプログラム: `curl`、ImageMagick、ffmpeg、`mv`、`rm`
 
 ### 1. 配色と mod を置く
 
@@ -261,6 +263,7 @@ herdr-app do layout.switch '{"name":"pokemon-plus-quiet"}'
 `cmd-shift-l` で `pokemon-plus`（鳴き声あり）やほかのレイアウトと行き来できる。
 
 - 鳴き声ありでは、Herdr の通知音も一緒に鳴る。通知音は `settings.json` の `sounds` で決まる全体の設定なので、レイアウトごとには変えられない
+- 完了の音（Herdr の通知音も鳴き声も）は、見ていないペインのエージェントが終わったときだけ鳴る。入力待ちの音は見ているペインでも鳴る
 - 前に別のポケモンの mod（`pokemon-agents`）を使っていたら、その割り当ては最初の 1 回だけ引き継ぐ
 
 ### 確認
