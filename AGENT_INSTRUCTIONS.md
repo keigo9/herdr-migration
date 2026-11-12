@@ -243,7 +243,7 @@ sh files/pokemon-plus/get-balls.sh
 
 | mod | 足したもの |
 |---|---|
-| `pokemon-tabs` | 関数 `monIcon(pane)`。`render` の `item` で、タブのエージェントのペイン（`agentPane`）からアイコンの画像（`data/pokemon-plus/icons/<番号>.png`、24×18）を出し、なければ元のプログラムのアイコン |
+| `pokemon-tabs` | 関数 `monIcon(pane)`。`render` の `item` で、タブのエージェントのペイン（`agentPane`）からアイコンの画像（`data/pokemon-plus/icons/<番号>.png`、24×18）を出し、なければ元のプログラムのアイコン。右上の Files / Changes の隣に Resume ボタン（`init` で `mods/claude-resume/mod.json` があるか読み、あるときだけ出す。押すと `mod.open` で claude-resume） |
 | `pokemon-agents-list` | 定数 `FACE` と関数 `face(a, size)`。`row` の `pic` を `face(a, 22) ?? icon(...)` にする（顔は `data/pokemon-plus/portraits/<4 桁の番号>/<表情>.png`） |
 | `pokemon-spaces` | `import` に `image`、定数 `BALLS` と `ballOf`。`render` で共有状態 `pokemon-spaces.balls` にスペースごとのボールを決め（使われていない中からランダム）、行の頭文字のアイコンの代わりに `mods/pokemon-spaces/balls/<ボール>.png`（22px）を出す |
 
@@ -286,3 +286,40 @@ herdr-app do layout.switch '{"name":"pokemon-plus-quiet"}'
   - Spaces の名前の左にボールの絵
   - 地の色がクリーム、強調色が赤（`#e3350d`）
 - `herdr-app do pokemon-plus.pick` でポケモンを選ぶ画面が開き、アイコンが並ぶ
+
+## 単体の mod: claude-resume（Claude Code の会話を中身を見て再開）
+
+`claude -r` の代わり。会話の一覧（タイトル・経過時間・ブランチ・依頼の回数）と、選んだ会話の中身（離席中の要約・最初の依頼・最近の依頼・最後の返答）を並べて出し、Enter で新しいタブに `claude -r <会話 ID>` を会話のフォルダで開く。テーマやレイアウトに関係なく単体で使える。
+
+- `index.py` が `~/.claude/projects/*/*.jsonl`（Claude Code の会話ログ）を読み、一覧を JSON で返す。外部への通信はない
+- 2 回目以降を速くするため、`~/.cache/herdr-claude-resume/index.json` に結果を保存する（ファイルの大きさと更新時刻が同じ会話は読み直さない）
+- 前提: `python3`（`exec` でユーザーの PATH から呼ぶ）、`claude`
+
+### 1. ファイルを置く
+
+**`mod.json` を先に置く**（`main.js` だけ先に置くと、開いているレイアウトの右端に mod が自動で追加される）:
+
+```sh
+mkdir -p ~/.config/herdr-app/mods/claude-resume
+cp files/claude-resume/mod.json ~/.config/herdr-app/mods/claude-resume/
+cp files/claude-resume/index.py files/claude-resume/main.js ~/.config/herdr-app/mods/claude-resume/
+```
+
+### 2. キー
+
+`~/.config/herdr-app/keys.json` の `global` に `"cmd-shift-r": "mod.open:claude-resume"` をマージする（`cmd-shift-r` が既に使われていたらユーザーに聞く）。
+
+pokemon-plus を入れていれば、右上の Files / Changes の隣に **Resume** ボタンも出る（`pokemon-tabs` が `mods/claude-resume/mod.json` の有無を見て出し分ける）。
+
+### 操作
+
+- 文字を打つと、タイトル・依頼の文面・ブランチ・フォルダで絞り込む
+- ↑/↓ で選び、Enter（または選択中の行をもう一度クリック）で新しいタブに再開
+- Tab で「開いたときのペインのフォルダの会話だけ」と「すべて」を切り替える（そのフォルダに会話がなければ最初から「すべて」）
+- タイトルは Claude Code が自動で付けたもの。`/rename` で付けた名前があればそちらを使う
+
+### 確認
+
+- `~/.config/herdr-app` で `herdr-app check mods/claude-resume` が通る
+- `herdr-app do mod.open '{"name":"claude-resume"}'` で真ん中にダイアログが開き、`herdr-app status` の `overlays` に `claude-resume`、`"errors": []`
+- `layouts/*.json` に `claude-resume` のブロックが入っていない（入っていたら手順 1 の順番を間違えたので、そのブロックを消す）

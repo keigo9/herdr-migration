@@ -1,6 +1,6 @@
 import { View, div, svg, image } from "gpui-kit";
 import { h_flex, ScrollHandle } from "gpui-base";
-import { spaces, panes, run, openOverlay, theme, window, shared, layout, settings } from "herdr";
+import { spaces, panes, run, openOverlay, theme, window, shared, layout, settings, readTextFile, appHome } from "herdr";
 
 function find(node, id) {
   if (node?.id === id) return node;
@@ -18,10 +18,16 @@ function monIcon(pane) {
 }
 
 export default class Tabs extends View {
-  init() {
+  init(_props, cx) {
     this.pressed = null;
     this.scroll = ScrollHandle.new();
     this.panels = JSON.parse(localStorage.getItem("panels") ?? "{}");
+    // Resume ボタンは claude-resume mod を入れているときだけ出す
+    this.resume = false;
+    cx.spawn(async (cx) => {
+      this.resume = Boolean(await readTextFile(`${appHome()}/mods/claude-resume/mod.json`).catch(() => null));
+      cx.notify();
+    });
   }
 
   // The side panel is remembered per space: switching shows that space's choice
@@ -117,6 +123,11 @@ export default class Tabs extends View {
       .child(button("tab-new", "+", () => openOverlay({ mod: "new-menu", kind: "popup", width: 250, height: 512 })))
       .when(enabled.includes("files"), el => el.child(panelButton("files", "Files", "mods/files/file.svg")))
       .when(enabled.includes("changes"), el => el.child(panelButton("changes", "Changes", "mods/changes/changes.svg")))
+      // Claude Code の会話を選んで再開する（mods/claude-resume、⌘⇧R と同じ）
+      .when(this.resume, el => el.child(h_flex().id("claude-resume").h(26).px(8).gap(5).flex_none().items_center().rounded(6)
+        .text_size(12).text_color(t.muted).hover(s => s.bg(t.hover)).on_mouse_down("left", stop)
+        .on_click(() => run("mod.open", { name: "claude-resume" }))
+        .child(svg("mods/workspace-chrome/clock.svg").size(14)).child("Resume")))
       .when(w?.buttons, el => el.child(button("minimize", w.platform === "windows" ? svg("mods/pokemon-tabs/win-min.svg").size(16) : "−", () => run("window.minimize")))
         .child(button("maximize", w.platform === "windows" ? svg(`mods/pokemon-tabs/${w.maximized ? "win-restore" : "win-max"}.svg`).size(16) : "□", () => run("window.maximize")))
         .child(button("close-window", w.platform === "windows" ? svg("mods/pokemon-tabs/win-close.svg").size(16) : svg("mods/pane/close.svg").size(13), () => run("window.close"))));
