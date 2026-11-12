@@ -8,7 +8,7 @@
 - レイアウト **glass** を使い、色は **glass-onedark** テーマ（One Dark 系の不透明な色）
 - タブバーに **Graph** ボタン（git-graph）
 - サイドバーは **pixel-spaces**（スペースごとのドット絵スプライト、ヘッダーのベル、`cmd-p` で pixel 版ピッカー、Codex だけピクセルアイコン。Claude Code のアイコンは Herdr 標準のまま）
-- ステータスバー右側に **Claude の usage**（5h 枠・週枠の使用率とリセット時刻）
+- ステータスバー右側に **Claude の usage**（5h 枠・週枠・コンテキストの使用率。マウスを乗せるとリセットまでの時間とセッションの情報）
 
 ## 前提
 
@@ -76,8 +76,13 @@ herdr-app do mod.clone '{"name":"workspace-status","as":"usage-status"}'
 cp files/usage-status/main.js ~/.config/herdr-app/mods/usage-status/main.js
 ```
 
-`main.js` は `~/.claude/herdr-usage/usage.json` を 10 秒ごとに読み、5h 枠と週枠の使用率・リセット時刻をステータスバーの右に表示する。
-元になった `workspace-status` は Herdr 0.1.12 のもの。バージョンが違うなら、クローンした新しい `main.js` と見比べて、usage の部分だけ移植する。追加したのは、`import` の `home, readTextFile`、定数とヘルパー関数（`USAGE_FILE` 〜 `usageColor`）、`init` / `loadUsage` / `usageWindow` / `usageSection` メソッド、`render` 内の `usage` の 2 行。
+`main.js` は `~/.claude/herdr-usage/` の `usage.json` と `sessions/*.json`（手順 7 のスクリプトが書く）を 10 秒ごとに読み、ステータスバーの右に表示する（見た目は [VladTemp27/herdr-mods の usage-limits](https://github.com/VladTemp27/herdr-mods/tree/main/usage-limits) に寄せた。コードはコピーしていない）:
+
+- **バー**: `Used ▬ 5h 38% · wk 54% · ctx 17%`。70% から黄（`ansi3`）、90% から赤（`ansi1`）。リセット時刻を過ぎた枠は `—`
+- **ホバーパネル**: `5-hour` / `Weekly` の行（バー・使用率・リセットまでの時間）と **This session**（プロジェクト・セッション名、コンテキストのバー、`169k of 1M tokens · 22 calls · 0 compactions`、モデル・effort・コスト・経過時間・増減行数）
+- セッションは、フォーカス中のペインと同じフォルダで最後に更新されたもの（なければ全体で最新）。同じフォルダで Claude Code を複数開くと取り違えることがある
+
+元になった `workspace-status` は Herdr 0.1.12 のもの。バージョンが違うなら、クローンした新しい `main.js` と見比べて、usage の部分だけ移植する。追加したのは、`import` の `v_flex, HoverCard`・`home, readTextFile, focused`・`fs/promises`、定数とヘルパー関数（`USAGE_DIR` 〜 `windowPct`）、`init` / `load` / `parse` / `session` / `usageBar` / `panel` メソッド、`render` 内の `session` / `usage` と `HoverCard` の部分。
 
 ### 6. glass レイアウトに組み込む
 
@@ -103,7 +108,11 @@ cp files/statusline-usage.sh ~/.claude/statusline-usage.sh
 "statusLine": { "type": "command", "command": "sh ~/.claude/statusline-usage.sh" }
 ```
 
-このスクリプトは、Claude Code から渡される `rate_limits` を `~/.claude/herdr-usage/usage.json` に保存し、Claude Code の画面下に `5h 12% · 週 2%` を表示する。
+このスクリプトは、Claude Code から渡される JSON から次を保存し、Claude Code の画面下に `5h 12% · wk 2% · ctx 17% · Opus 5.5` を表示する（`jq` を使う）:
+
+- `~/.claude/herdr-usage/usage.json`: `rate_limits`（5h 枠と週枠）
+- `~/.claude/herdr-usage/sessions/<セッション id>.json`: モデル・effort・コンテキスト・コスト・経過時間・増減行数と、会話ログ（`transcript_path`）から数えたメッセージ数・圧縮回数（数だけ取り出す）。1 週間更新のないファイルは消す
+
 `rate_limits` は claude.ai の Pro / Max / Ultra プランで、セッションの最初の返事のあとにだけ届く。
 ステータスラインを設定すると、Claude Code の画面下の `esc to interrupt` などのヒントは表示されなくなる。
 
@@ -124,7 +133,7 @@ herdr-app do app.theme '{"name":"glass-onedark"}'
   - サイドバー・タブバーの色が `#21252b`、ペインが `#282c34`
   - タブバー右に Files / Changes / **Graph**
   - スペースの左にドット絵のスプライト、ヘッダーに Herdr のロゴがない
-  - Claude Code を一度動かしたあと、ステータスバー右に `5h ◯% ↻ 時刻  週 ◯% ↻ 曜日 時刻`
+  - Claude Code を一度動かしたあと、ステータスバー右に `Used ▬ 5h ◯% · wk ◯% · ctx ◯%`。マウスを乗せるとパネルが開く
 - 終わったら、変えたファイルと確認結果をユーザーに報告する
 
 ## 別テーマ: moonlit（夜空）
@@ -248,6 +257,7 @@ python3 -I files/pokemon-plus/make-layouts.py
 
 - `theme` を `{ "light": "pokedex", "dark": "graphite" }`
 - `tabs` → `pokemon-tabs`、`agents` → `pokemon-agents-list`、`spaces` → `pokemon-spaces`
+- `mods/usage-status` があれば（上の手順 5・7 を済ませていれば）、ステータスバーの `workspace-status` → `usage-status`
 - `work` 列のステータスバー（`status`）の上に帯を追加: `{ "id": "pokemon-plus", "type": "block", "content": { "mod": "pokemon-plus", "props": { "cries": true } }, "size": { "px": 112 }, "min": 72, "max": 240 }`（quiet は `"cries": false`）
 
 同じ名前のレイアウトが既にあれば、上書きせずに止まる。

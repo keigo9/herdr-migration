@@ -11,6 +11,9 @@ home = sys.argv[1] if len(sys.argv) > 1 else os.path.expanduser("~/.config/herdr
 
 # Herdr 標準の mod を、手を入れた複製に差し替える。
 SWAP = {"tabs": "pokemon-tabs", "agents": "pokemon-agents-list", "spaces": "pokemon-spaces"}
+# usage-status（Claude の usage 表示）が入っていれば、ステータスバーもそれにする。
+if os.path.exists(f"{home}/mods/usage-status/main.js"):
+    SWAP["workspace-status"] = "usage-status"
 
 
 def swap_mods(node):
