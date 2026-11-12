@@ -80,7 +80,7 @@ cp files/usage-status/main.js ~/.config/herdr-app/mods/usage-status/main.js
 
 - **バー**: `Used ▬ 5h 38% · wk 54% · ctx 17%`。70% から黄（`ansi3`）、90% から赤（`ansi1`）。リセット時刻を過ぎた枠は `—`
 - **ホバーパネル**: `5-hour` / `Weekly` の行（バー・使用率・リセットまでの時間）と **This session**（プロジェクト・セッション名、コンテキストのバー、`169k of 1M tokens · 22 calls · 0 compactions`、モデル・effort・コスト・経過時間・増減行数）
-- セッションは、フォーカス中のペインと同じフォルダで最後に更新されたもの（なければ全体で最新）。同じフォルダで Claude Code を複数開くと取り違えることがある
+- セッションは、フォーカス中のターミナルのもの（ステータスラインが保存した `HC_TERMINAL_ID` で突き合わせる）。エージェントでないペインなら、同じフォルダで最新、それもなければ全体で最新
 
 元になった `workspace-status` は Herdr 0.1.12 のもの。バージョンが違うなら、クローンした新しい `main.js` と見比べて、usage の部分だけ移植する。追加したのは、`import` の `v_flex, HoverCard`・`home, readTextFile, focused`・`fs/promises`、定数とヘルパー関数（`USAGE_DIR` 〜 `windowPct`）、`init` / `load` / `parse` / `session` / `usageBar` / `panel` メソッド、`render` 内の `session` / `usage` と `HoverCard` の部分。
 
@@ -111,7 +111,7 @@ cp files/statusline-usage.sh ~/.claude/statusline-usage.sh
 このスクリプトは、Claude Code から渡される JSON から次を保存し、Claude Code の画面下に `5h 12% · wk 2% · ctx 17% · Opus 5.5` を表示する（`jq` を使う）:
 
 - `~/.claude/herdr-usage/usage.json`: `rate_limits`（5h 枠と週枠）
-- `~/.claude/herdr-usage/sessions/<セッション id>.json`: モデル・effort・コンテキスト・コスト・経過時間・増減行数と、会話ログ（`transcript_path`）から数えたメッセージ数・圧縮回数（数だけ取り出す）。1 週間更新のないファイルは消す
+- `~/.claude/herdr-usage/sessions/<セッション id>.json`: Herdr のターミナル id（`HC_TERMINAL_ID`）・モデル・effort・コンテキスト・コスト・経過時間・増減行数と、会話ログ（`transcript_path`）から数えたメッセージ数・圧縮回数（数だけ取り出す）。1 週間更新のないファイルは消す
 
 `rate_limits` は claude.ai の Pro / Max / Ultra プランで、セッションの最初の返事のあとにだけ届く。
 ステータスラインを設定すると、Claude Code の画面下の `esc to interrupt` などのヒントは表示されなくなる。

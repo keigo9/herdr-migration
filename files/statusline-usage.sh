@@ -28,8 +28,9 @@ if [ -n "$id" ]; then
       END { print calls + 0, compactions + 0 }' "$transcript")
   fi
   set -- $counts
-  printf '%s' "$input" | jq -c --argjson now "$now" --argjson calls "$1" --argjson compactions "$2" '{
-    session_id, name: .session_name, cwd,
+  # HC_TERMINAL_ID: Herdr がターミナルごとに付ける id（Herdr の外では空）。フォーカス中のペインとの突き合わせに使う
+  printf '%s' "$input" | jq -c --argjson now "$now" --argjson calls "$1" --argjson compactions "$2" --arg terminal "${HC_TERMINAL_ID:-}" '{
+    session_id, name: .session_name, cwd, terminal: ($terminal | if . == "" then null else . end),
     project: ((.workspace.project_dir // .cwd // "") | split("/") | last),
     model: .model.display_name, effort: .effort.level,
     ctx: (.context_window | if . then {

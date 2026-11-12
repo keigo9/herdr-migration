@@ -98,11 +98,14 @@ export default class WorkspaceStatus extends View {
     }
   }
 
-  // lean: フォーカス中のペインと同じフォルダで最後に更新されたセッション。なければ全体で最新。
-  // 同じフォルダで Claude Code を複数開くと取り違えうる — 厳密にするならプロセス id で突き合わせる
+  // フォーカス中のターミナルで最後に更新されたセッション（ステータスラインが HC_TERMINAL_ID を保存している）。
+  // エージェントでないペインなら、同じフォルダで最新、それもなければ全体で最新
   session() {
-    const cwd = focused()?.cwd;
-    return this.sessions.find((s) => cwd && s.cwd === cwd) ?? this.sessions[0] ?? null;
+    const f = focused();
+    const terminal = f?.agent ?? f?.terminal;
+    return this.sessions.find((s) => terminal && s.terminal === terminal)
+      ?? this.sessions.find((s) => f?.cwd && s.cwd === f.cwd)
+      ?? this.sessions[0] ?? null;
   }
 
   // The palette key as actually bound, not a hardcoded one; without a
