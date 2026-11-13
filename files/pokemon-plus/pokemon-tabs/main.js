@@ -76,6 +76,8 @@ export default class Tabs extends View {
       const agentPane = panes().find(p => p.tab === c.id && p.program?.agent);
       const program = agentPane?.program ?? panes().find(p => p.tab === c.id)?.program;
       const mon = monIcon(agentPane);
+      // シェルでもエージェントでもないものが前面で動いているペイン（cloud-sql-proxy など）。止め忘れに気づけるよう名前を出す
+      const running = [...new Set(panes().filter(p => p.tab === c.id && p.program && !p.program.shell && !p.program.agent).map(p => p.program.name))];
       const name = /^tb\d+$/.test(c.name) ? program?.name ?? "Terminal" : c.name;
       return h_flex().id(`tab-${c.id}`).h(29).px(10).gap(7).rounded(7).items_center().flex_none().text_size(12.8)
         // A rename or status dot on this or an earlier tab can push the active one out.
@@ -92,6 +94,9 @@ export default class Tabs extends View {
         .when(Boolean(mon), el => el.child(image(mon).w(24).h(18).flex_none()))
         .when(!mon && Boolean(program?.icon), el => el.child(program.tint ? svg(program.icon).size(14).text_color(t.muted) : image(program.icon).size(14)))
         .child(div().max_w(170).truncate().child(c.zoomed ? `${name} Z` : name))
+        .when(running.length > 0, el => el.child(h_flex().h(18).px(6).gap(4).flex_none().items_center().rounded(9).bg(t.selected).text_size(11).text_color(t.foreground)
+          .child(div().size(6).rounded(3).bg(t.ansi2))
+          .child(div().max_w(130).truncate().child(running.join(" · ")))))
         .when(c.status === "working", el => el.child(svg("mods/workspace-chrome/spinner.svg").size(12).flex_none().text_color(t.working).spin(900)))
         .when(c.status === "blocked" || c.status === "done", el => el.child(div().size(6).rounded(3).bg(t[c.status])))
         .when(c.active, el => el.child(div().id(`close-${c.id}`).text_color(t.dim).on_mouse_down("left", stop).on_click((_e, cx) => { cx.stop_propagation(); run("tab.close", { id: c.id }); }).child(svg("mods/pane/close.svg").size(12))));

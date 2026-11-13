@@ -243,7 +243,7 @@ sh files/pokemon-plus/get-balls.sh
 
 | mod | 足したもの |
 |---|---|
-| `pokemon-tabs` | 関数 `monIcon(pane)`。`render` の `item` で、タブのエージェントのペイン（`agentPane`）からアイコンの画像（`data/pokemon-plus/icons/<番号>.png`、24×18）を出し、なければ元のプログラムのアイコン。右上の Files / Changes の隣に Resume ボタン（`init` で `mods/claude-resume/mod.json` があるか読み、あるときだけ出す。押すと `mod.open` で claude-resume） |
+| `pokemon-tabs` | 関数 `monIcon(pane)`。`render` の `item` で、タブのエージェントのペイン（`agentPane`）からアイコンの画像（`data/pokemon-plus/icons/<番号>.png`、24×18）を出し、なければ元のプログラムのアイコン。右上の Files / Changes の隣に Resume ボタン（`init` で `mods/claude-resume/mod.json` があるか読み、あるときだけ出す。押すと `mod.open` で claude-resume）。タブの中でシェルでもエージェントでもないもの（`cloud-sql-proxy` など）が前面で動いていれば、タブに緑の点とそのコマンド名（`panes()` の `program` が `!shell && !agent` のものの `name`） |
 | `pokemon-agents-list` | 定数 `FACE` と関数 `face(a, size)`。`row` の `pic` を `face(a, 22) ?? icon(...)` にする（顔は `data/pokemon-plus/portraits/<4 桁の番号>/<表情>.png`） |
 | `pokemon-spaces` | `import` に `image`、定数 `BALLS` と `ballOf`。`render` で共有状態 `pokemon-spaces.balls` にスペースごとのボールを決め（使われていない中からランダム）、行の頭文字のアイコンの代わりに `mods/pokemon-spaces/balls/<ボール>.png`（22px）を出す |
 
